@@ -1,0 +1,77 @@
+version: "3"
+
+services:
+  server:
+    image: gitea/gitea:1.21.3
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=${GITEA__database__DB_TYPE:?GITEA__database__DB_TYPE not set}
+      - GITEA__database__HOST=${GITEA__database__HOST:?GITEA__database__HOST not set}
+      - GITEA__database__NAME=${GITEA__database__NAME:?GITEA__database__NAME not set}
+      - GITEA__database__USER=${GITEA__database__USER:?GITEA__database__USER not set}
+      - GITEA__database__PASSWD=${GITEA__database__PASSWD:?GITEA__database__PASSWD not set}
+      - GITEA__mailer__ENABLED=true
+      - GITEA__mailer__FROM=${GITEA__mailer__FROM:?GITEA__mailer__FROM not set}
+      - GITEA__mailer__PROTOCOL=smtps
+      - GITEA__mailer__HOST=${GITEA__mailer__HOST:?GITEA__mailer__HOST not set}
+      - GITEA__mailer__USER=${GITEA__mailer__USER:-apikey}
+      - GITEA__mailer__PASSWD="""${GITEA__mailer__PASSWD:?GITEA__mailer__PASSWD not set}"""
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - .docker/gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "222:22"
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD not set}
+      - MYSQL_USER=${MYSQL_USER:?MYSQL_USER not set}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:?MYSQL_PASSWORD not set}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:?MYSQL_DATABASE not set}
+    networks:
+      - gitea
+    volumes:
+      - .docker/mysql:/var/lib/mysql
+
+  jenkins:
+      image: jenkins/jenkins:lts
+      privileged: true
+      user: root
+      ports:
+        - 8080:8080
+        - 50000:50000
+      container_name: jenkins
+      networks:
+      - gitea
+      volumes:
+        - .docker/jenkins_home:/var/jenkins_home
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /snap/bin/docker:/usr/local/bin/docker # to have acces of docker inside jenkins
+
+  nexus:
+    image: sonatype/nexus3:3.63.0
+    container_name: nexus
+    restart: always
+    volumes:
+      - ".docker/nexus-data:/sonatype-work"
+    ports:
+      - "8081:8081"
+      - "8085:8085"
+    networks:
+      - gitea
+
+networks:
+  gitea:
+    driver: bridge

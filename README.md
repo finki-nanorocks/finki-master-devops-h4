@@ -1,0 +1,1 @@
+# Finki Master - DevOps - Andrej Nankov
