@@ -1,8 +1,8 @@
 version: "3"
 
 services:
-  server:
-    image: gitea/gitea:1.21.3
+  gitea:
+    image: gitea/gitea
     container_name: gitea
     environment:
       - USER_UID=1000
@@ -20,7 +20,7 @@ services:
       - GITEA__mailer__PASSWD="""${GITEA__mailer__PASSWD:?GITEA__mailer__PASSWD not set}"""
     restart: always
     networks:
-      - gitea
+      - homework4
     volumes:
       - .docker/gitea:/data
       - /etc/timezone:/etc/timezone:ro
@@ -29,9 +29,9 @@ services:
       - "3000:3000"
       - "222:22"
     depends_on:
-      - db
+      - mysql
 
-  db:
+  mysql:
     image: mysql:8
     container_name: mysql
     restart: always
@@ -41,24 +41,24 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:?MYSQL_PASSWORD not set}
       - MYSQL_DATABASE=${MYSQL_DATABASE:?MYSQL_DATABASE not set}
     networks:
-      - gitea
+      - homework4
     volumes:
       - .docker/mysql:/var/lib/mysql
 
   jenkins:
-      image: jenkins/jenkins:lts
-      privileged: true
-      user: root
-      ports:
-        - 8080:8080
-        - 50000:50000
-      container_name: jenkins
-      networks:
-      - gitea
-      volumes:
+    image: nanorocks/jenkins-php82-composer
+    privileged: true
+    user: root
+    restart: always
+    ports:
+      - 8080:8080
+      - 50000:50000
+    container_name: jenkins
+    networks:
+        - homework4
+    volumes:
         - .docker/jenkins_home:/var/jenkins_home
         - /var/run/docker.sock:/var/run/docker.sock
-        - /snap/bin/docker:/usr/local/bin/docker # to have acces of docker inside jenkins
 
   nexus:
     image: sonatype/nexus3:3.63.0
@@ -70,8 +70,9 @@ services:
       - "8081:8081"
       - "8085:8085"
     networks:
-      - gitea
+      - homework4
 
 networks:
-  gitea:
+  homework4:
+    name: homework4
     driver: bridge
